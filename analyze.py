@@ -1,30 +1,30 @@
 #! /usr/bin/python3
 import re
-#import numpy as np
+import numpy as np
 import csv
 import os
-#import matplotlib.pyplot as plt
-#from pylab import *
+import matplotlib.pyplot as plt
+from pylab import *
 
 kMaxInterval = 60
 
 def AnalyzeRaw(datas):
-  transfers = []
-  bandwidths = []
-  jitters = []
-  lost_rates = []
+  transfers = [0]
+  bandwidths = [0]
+  jitters = [0]
+  lost_rates = [0]
   for data in datas:
     transfers.append(float(data[2]))
     bandwidth = data[3]
     if (data[4] == "Mbits"):
       bandwidth = float(bandwidth)*1024;
     bandwidths.append(float(bandwidth))
-    jitters.append(float(data[5]))
-    lost_rates.append(float(data[8]))
-  return [np.mean(transfers), np.mean(bandwidths), np.mean(jitters), np.mean(lost_rates),
-          np.median(transfers), np.median(bandwidths), np.median(jitters), np.median(lost_rates),
-          np.amax(transfers), np.amax(bandwidths), np.amax(jitters), np.amax(lost_rates),
-          np.amin(transfers), np.amin(bandwidths), np.amin(jitters), np.amin(lost_rates)]
+#    jitters.append(float(data[5]))
+#    lost_rates.append(float(data[8]))
+  return [np.mean(transfers), np.mean(bandwidths),
+          np.median(transfers), np.median(bandwidths),
+          np.amax(transfers), np.amax(bandwidths),
+          np.amin(transfers), np.amin(bandwidths)]
 
 # get value value of transfer data, bandwidth, jitter and lost rate.
 def ParseFile(input):
@@ -43,13 +43,13 @@ def ParseFile(input):
 
 def ParseLine(line):
   match_result = re.match(r"^\[.*?\]\s+"
-                          "([0-9]{1,}[.][0-9]*)\s*-\s*([0-9]{1,}[.][0-9]*) sec\s+"
-                          "([0-9]{1,}[.]{0,1}[0-9]*) KBytes\s+"
-                          "([0-9]{1,}[.]{0,1}[0-9]*) ([MK]bits)/sec\s+"
-                          "([0-9]{1,}[.][0-9]*) ms\s+"
-                          "([0-9]{1,})/\s+"
-                          "([0-9]{1,})\s+"
-                          "\(([0-9]{1,}[.]{0,1}[0-9]*)\%\)$", line)
+                          "(\d+[.]\d*)\s*-\s*(\d+[.]\d*)\s+sec\s+"
+                          "(\d+[.]{0,1}\d*) KBytes\s+"
+                          "(\d+[.]{0,1}\d*) ([MK]bits)/sec", line)
+#                          "(\d+[.]\d*) ms\s+"
+#                          "(\d+)/\s+"
+#                          "(\d+)\s+"
+#                          "\((\d+[.]{0,1}\d*)\%\)$", line)
   if match_result == None:
 #    print("Can't pasrse " + line);
     return match_result
@@ -68,10 +68,10 @@ def ParseDir(path, output_dir):
         continue
       analyze_results.append(AnalyzeRaw(results))
   
-  title = ["transfer_mean", "bandwidth_mean", "jitter_mean", "lostrate_mean", 
-          "transfer_median", "bandwidth_median", "jitter_median", "lostrate_median",
-          "transfer_max", "bandwidth_max", "jitter_max", "lostrate_max",
-          "transfer_min", "bandwidth_min", "jitter_min", "lostrate_min"]
+  title = ["transfer_mean", "bandwidth_mean",
+          "transfer_median", "bandwidth_median",
+          "transfer_max", "bandwidth_max",
+          "transfer_min", "bandwidth_min"]
   output_path = os.path.join(output_dir, path+"_analyze.csv")
   with open(output_path, 'w+') as output_file:
     output_file.write(','.join(title))
@@ -126,7 +126,6 @@ def ShowAllData(path):
   plt.plot([1,2,4,6,8,10,20,40], lostrate_mean)
   xlim(1, 40)
 
-
   file_list = ["udp_1M_analyze.csv", "udp_2M_analyze.csv", "udp_4M_analyze.csv", 
               "udp_8M_analyze.csv", "udp_20M_analyze.csv", "udp_40M_analyze.csv"]
   udp_bandwithds_mean = []
@@ -155,6 +154,23 @@ def ShowAllData(path):
   plt.plot([1,2,4,8,20,40], udp_lostrate_mean)
   xlim(1, 40)
 
+  file_list = ["tcp_1M_analyze.csv", "tcp_2M_analyze.csv", "tcp_4M_analyze.csv", 
+              "tcp_8M_analyze.csv", "tcp_10M_analyze.csv", "tcp_20M_analyze.csv"]
+  tcp_bandwithds_mean = []
+  for i in range(0, len(file_list)):
+    file_path = os.path.join("tcp", file_list[i])
+    with open(file_path, 'r') as csvfile:
+      reader = csv.reader(csvfile)
+      column_bandwidths = [row[1] for row in reader][1:]
+      column_bandwidths = [float(value) for value in column_bandwidths]
+      tcp_bandwithds_mean.append(np.mean(column_bandwidths))
+    
+  print(tcp_bandwithds_mean)
+  plt.subplot(223)
+  plt.title("bandwidth")
+  plt.plot([1,2,4,8,10,20], tcp_bandwithds_mean)
+  xlim(1, 20)
+
   plt.show();
 
 def show(input_bandwidths1, input_bandwidths2, mbandwidths, mlost_rates, ubandwidths, ulost_rates):
@@ -179,7 +195,7 @@ def show(input_bandwidths1, input_bandwidths2, mbandwidths, mlost_rates, ubandwi
     plt.show();
 
 if __name__ == '__main__':
-  AnalyzeTCP()
-#  ShowAllData("multicast")
+#  AnalyzeTCP()
+  ShowAllData("multicast")
 #  show([0,40], np.array([10,1000]), np.array([20,50]))
 #  multicast_path_list = ["multicast_1M"]
